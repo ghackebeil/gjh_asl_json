@@ -3,6 +3,8 @@ A tool providing similar functionality to that of the gjh
 "solver" distributed with the AMPL Solver Library. Result is
 output in JSON format.
 
+[![Build Status](https://travis-ci.org/ghackebeil/gjh_asl_json.svg?branch=master)](https://travis-ci.org/ghackebeil/gjh_asl_json)
+
 Installation looks something like:
  1. $ cd Thirdparty/
  2. $ ./get.ASL

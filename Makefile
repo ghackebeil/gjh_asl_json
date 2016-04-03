@@ -1,7 +1,7 @@
 SRC=src
 TPL=Thirdparty
 
-PREFIX="."
+PREFIX=.
 LIB=$(PREFIX)/lib
 BIN=$(PREFIX)/bin
 

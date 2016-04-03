@@ -14,5 +14,5 @@ script:
  - test -x bin/gjh_asl_json
  - test -f lib/libAmplInterface.a
  - make clean
- - ! test -f bin/gjh_asl_json
- - ! test -f lib/libAmplInterface.a
+ - "! test -f bin/gjh_asl_json"
+ - "! test -f lib/libAmplInterface.a"

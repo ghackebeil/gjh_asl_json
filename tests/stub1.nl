@@ -30,9 +30,12 @@ S5 3 con_real
 0 3.5
 1 4.5
 2 5.5
-S0 2 sosno
+S0 2 ref
 0 2
 1 3
+S0 2 sosno
+0 1
+1 1
 C0	#c[1]
 o2	#*
 v0	#x[1]

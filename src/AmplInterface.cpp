@@ -260,6 +260,15 @@ void AmplInterface::WriteSummary(std::ostream& out)
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
+   int tmpx;
+   int tmpc;
+   int tmpnnzjacc;
+   int tmpnnzheslag;
+   get_nlp_dimensions(tmpx, tmpc, tmpnnzjacc, tmpnnzheslag);
+   _ASSERT_(tmpx == n_var, "Number of vars does not match");
+   _ASSERT_(tmpc == n_con, "Number of cons does not match");
+   _ASSERT_(tmpnnzjacc == nzc, "Number nonzeros in constraints jacobian does not match");
+   _ASSERT_(tmpnnzheslag == nnz_hes_lag_, "Number of nonzeros in lagrangian hessian does not match");
 
    out << "{" << std::endl; // JSON START
    ////////////////////////
@@ -546,14 +555,18 @@ void AmplInterface::WriteSummary(std::ostream& out)
    get_primal_starting_point(start_primal_sparse);
    get_dual_starting_point(start_dual_sparse);
    out << "  \"primal\": {" << std::endl;
-   for (std::map<int,double>::iterator pos = start_primal_sparse.begin(), pos_stop = start_primal_sparse.end(); pos != pos_stop; /*++inside loop*/) {
+   for (std::map<int,double>::iterator pos = start_primal_sparse.begin(),
+           pos_stop = start_primal_sparse.end();
+        pos != pos_stop; /*++inside loop*/) {
       out << "    \"" << cols_map[pos->first] << "\": " << pos->second;
       if (++pos != pos_stop) {out << ",";}
       out << std::endl;
    }
    out << "  }," << std::endl; // end primal
    out << "  \"dual\": {" << std::endl;
-   for (std::map<int,double>::iterator pos = start_dual_sparse.begin(), pos_stop = start_dual_sparse.end(); pos != pos_stop; /*++ inside loop*/) {
+   for (std::map<int,double>::iterator pos = start_dual_sparse.begin(),
+           pos_stop = start_dual_sparse.end();
+        pos != pos_stop; /*++ inside loop*/) {
       out << "    \"" << rows_map[pos->first] << "\": " << pos->second;
       if (++pos != pos_stop) {out << ",";}
       out << std::endl;
@@ -567,7 +580,8 @@ void AmplInterface::WriteSummary(std::ostream& out)
    out << "\"assumed starting points\": {" << std::endl;
    double primal_assumed = 1.0;
    double dual_assumed = 1.0;
-   std::vector<double> start_primal_dense(n_var,primal_assumed), start_dual_dense(n_con,dual_assumed);
+   std::vector<double> start_primal_dense(n_var,primal_assumed);
+   std::vector<double> start_dual_dense(n_con,dual_assumed);
    get_primal_starting_point(&(start_primal_dense[0]));
    get_dual_starting_point(&(start_dual_dense[0]));
    out << "  \"primal\": " << primal_assumed << "," << std::endl;
@@ -707,8 +721,6 @@ void AmplInterface::set_objective(int objective_number) {
 
    objn_ = objective_number;
 
-   //   hesset(1,0,1,0,nlc);
-
    int mult_supplied = 1; // multipliers will be supplied
    // I specifically ask for the entire matrix (even though it is
    // symmetric) so that we can compare AMPL and Pyomo. Because of
@@ -738,7 +750,7 @@ void AmplInterface::get_con_bounds(double* c_l, double* c_u) const
    if (n_con == 0) {return ;} // unconstrained problem
    _ASSERT_(c_l && c_u, "One or more arguments to get_con_bounds is NULL");
 
-   for (int i=0; i<n_con; i++) {
+   for (int i = 0; i < n_con; ++i) {
       c_l[i] = LUrhs[2*i];
       c_u[i] = LUrhs[2*i+1];
    }
@@ -750,7 +762,7 @@ void AmplInterface::get_var_bounds(double* x_l, double* x_u) const
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
    _ASSERT_(x_l && x_u, "One or more arguments to get_var_bounds is NULL");
 
-   for (int i=0; i<n_var; i++) {
+   for (int i = 0; i < n_var; ++i) {
       x_l[i] = LUv[2*i];
       x_u[i] = LUv[2*i+1];
    }
@@ -808,7 +820,7 @@ void AmplInterface::struct_jac_c(int* irow, int* jcol) const
 
    // get the non zero structure of the jacobian of c
    int current_nz = 0;
-   for (int i=0; i<n_con; i++) {
+   for (int i = 0; i < n_con; ++i) {
       for (cgrad* cg=Cgrad[i]; cg; cg = cg->next) {
 	 irow[cg->goff] = i;
 	 jcol[cg->goff] = cg->varno;
@@ -840,8 +852,8 @@ void AmplInterface::struct_hes_lag(int* irow, int* jcol) const
    _ASSERT_(irow && jcol, "One or more arguments to struct_jac_c is NULL");
 
    // setup the structure
-   int k=0;
-   for (int i=0; i<n_var; i++) {
+   int k = 0;
+   for (int i = 0; i < n_var; ++i) {
       for (int j=sputinfo->hcolstarts[i]; j<sputinfo->hcolstarts[i+1]; j++) {
 	 irow[k] = i;
 	 jcol[k] = sputinfo->hrownos[j];
@@ -877,7 +889,7 @@ void AmplInterface::get_dual_starting_point(double* x) const
    if (n_con == 0) {return ;} // unconstrained problem
    _ASSERT_(x, "Argument of get_dual_starting_point is NULL");
 
-   for (int i=0; i<n_con; i++) {
+   for (int i = 0; i < n_con; ++i) {
       if (havepi0[i]) {
 	 x[i] = pi0[i];
       }
@@ -891,7 +903,7 @@ void AmplInterface::get_dual_starting_point(std::map<int,double>& x) const
    x.clear();
    if (n_con == 0) {return ;} // unconstrained problem
 
-   for (int i=0; i<n_con; i++) {
+   for (int i = 0; i < n_con; ++i) {
       if (havepi0[i]) {
 	 x[i] = pi0[i];
       }
@@ -905,7 +917,7 @@ void AmplInterface::get_primal_starting_point(double* x) const
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
    _ASSERT_(x, "Argument of get_primal_starting_point is NULL");
 
-   for (int i=0; i<n_var; i++) {
+   for (int i = 0; i < n_var; ++i) {
       if (havex0[i]) {
 	 x[i] = X0[i];
       }
@@ -918,7 +930,7 @@ void AmplInterface::get_primal_starting_point(std::map<int,double>& x) const
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
    x.clear();
 
-   for (int i=0; i<n_var; i++) {
+   for (int i = 0; i < n_var; ++i) {
       if (havex0[i]) {
 	 x[i] = X0[i];
       }

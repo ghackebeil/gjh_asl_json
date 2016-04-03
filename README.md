@@ -4,7 +4,7 @@ A tool providing similar functionality to that of the gjh
 output in JSON format.
 
 Installation looks something like:
- $ cd Thirdparty/
- $ ./get.ASL
- $ cd ..
- $ make
+ 1. $ cd Thirdparty/
+ 2. $ ./get.ASL
+ 3. $ cd ..
+ 4. $ make

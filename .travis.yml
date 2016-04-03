@@ -9,10 +9,21 @@ install:
  - cd Thirdparty/
  - ./get.ASL
  - cd ..
- - make
+ - make COVERAGE="-coverage -O0"
 script:
  - test -x bin/gjh_asl_json
  - test -f lib/libAmplInterface.a
+ - rm -f tests/stub.json
+ - "! test -f tests/stub.json"
+ - bin/gjh_asl_json tests/stub.nl
+ - test -f tests/stub.json
+ - rm -f tests/stub.json
+ - "! test -f tests/stub.json"
+ - bin/gjh_asl_json tests/stub.nl rows=tests/stub.row cols=tests/stub.col
+ - test -f tests/stub.json
+after_success:
+ - bash <(curl -s https://codecov.io/bash)
+after_script:
  - make clean
  - "! test -f bin/gjh_asl_json"
  - "! test -f lib/libAmplInterface.a"

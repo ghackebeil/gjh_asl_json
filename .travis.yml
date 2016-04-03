@@ -13,7 +13,6 @@ install:
  - make COVERAGE="-coverage -O0"
 script:
  - test -x bin/gjh_asl_json
- - test -f lib/libAmplInterface.a
  - cd tests/
  - bash runtests.sh
  - cd ..
@@ -23,4 +22,3 @@ after_success:
 after_script:
  - make clean
  - "! test -f bin/gjh_asl_json"
- - "! test -f lib/libAmplInterface.a"

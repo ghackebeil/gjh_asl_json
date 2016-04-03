@@ -1,0 +1,12 @@
+language: cpp
+compiler:
+ - clang
+ - gcc
+os:
+ - linux
+ - osx
+install:
+ - cd Thirdparty/
+ - ./get.ASL
+ - cd ..
+ - make

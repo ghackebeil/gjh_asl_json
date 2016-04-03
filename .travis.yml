@@ -21,6 +21,7 @@ script:
  - "! test -f tests/stub.json"
  - bin/gjh_asl_json tests/stub.nl rows=tests/stub.row cols=tests/stub.col
  - test -f tests/stub.json
+ - gcov src/*
 after_success:
  - bash <(curl -s https://codecov.io/bash)
 after_script:

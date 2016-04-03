@@ -82,53 +82,38 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    // read the options and get the name of the .nl file (stub)
    char* stub = getstops(argv, Oinfo);
 
-   // I've tried to handle most of the suffixes commonly accepted
-   // by solvers, especially cplex and gurobi. If new ones are encountered
-   // they should be added. I don't think we need to worry about outonly suffixes. This
-   // program is only meant to summarize what has been passed to an ASL solver.
+   // Try to handle most of the input suffixes commonly
+   // handled by solvers. Is there a way to except any
+   // suffix?  If new ones are encountered they should be
+   // added. This program is only meant to summarize what
+   // has been passed to an ASL solver, so we are ignoring
+   // outonly suffixes.
    SufDecl suftab[] = {
-      //{ const_cast<char*>("absmipgap"), 0, ASL_Sufkind_obj | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("absmipgap"), 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("basis_cond"), 0, ASL_Sufkind_obj  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("basis_cond"), 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("bestbound"), 0, ASL_Sufkind_obj  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("bestbound"), 0, ASL_Sufkind_prob | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("bestnode"), 0, ASL_Sufkind_obj  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("bestnode"), 0, ASL_Sufkind_prob | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("current"), 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("current"), 0, ASL_Sufkind_var | ASL_Sufkind_outonly },
-      { const_cast<char*>("direction"), 0, ASL_Sufkind_var },
-      //{ const_cast<char*>("down"), 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("down"), 0, ASL_Sufkind_var | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("dunbdd"), 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("iis"), iis_table, ASL_Sufkind_var | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("iis"), 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-      { const_cast<char*>("lazy"), 0, ASL_Sufkind_con },
-      { const_cast<char*>("lbpen"), 0, ASL_Sufkind_var | ASL_Sufkind_real },
-      //{ const_cast<char*>("npool"), 0, ASL_Sufkind_prob | ASL_Sufkind_outonly},
-      { const_cast<char*>("priority"), 0, ASL_Sufkind_var },
-      { const_cast<char*>("ref"), 0, ASL_Sufkind_var | ASL_Sufkind_real },
-      //{ const_cast<char*>("relmipgap"), 0, ASL_Sufkind_obj  | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("relmipgap"), 0, ASL_Sufkind_prob  | ASL_Sufkind_outonly },
-      { const_cast<char*>("rhspen"), 0, ASL_Sufkind_con | ASL_Sufkind_real },
-      //{ const_cast<char*>("senslbhi"),  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("senslblo"),  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensobjhi"), 0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensobjlo"), 0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensrhshi"), 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensrhslo"), 0, ASL_Sufkind_con | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensubhi"),  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      //{ const_cast<char*>("sensublo"),  0, ASL_Sufkind_var | ASL_Sufkind_real | ASL_Sufkind_outonly },
-      { const_cast<char*>("sos"), 0, ASL_Sufkind_var },
-      { const_cast<char*>("sos"), 0, ASL_Sufkind_con },
-      { const_cast<char*>("sosno"), 0, ASL_Sufkind_var | ASL_Sufkind_real },
-      { const_cast<char*>("sosref"), 0, ASL_Sufkind_var | ASL_Sufkind_real },
-      { const_cast<char*>("sstatus"), 0, ASL_Sufkind_var, 1 },
-      { const_cast<char*>("sstatus"), 0, ASL_Sufkind_con, 1 },
-      { const_cast<char*>("ubpen"), 0, ASL_Sufkind_var | ASL_Sufkind_real },
-      //{ const_cast<char*>("unbdd"), 0, ASL_Sufkind_var | ASL_Sufkind_outonly},
-      { const_cast<char*>("up"), 0, ASL_Sufkind_con | ASL_Sufkind_outonly },
-      { const_cast<char*>("up"), 0, ASL_Sufkind_var | ASL_Sufkind_outonly }};
+         /* these are used for testing */
+      {const_cast<char*>("var_int"), 0, ASL_Sufkind_var},
+      {const_cast<char*>("var_real"), 0, ASL_Sufkind_var | ASL_Sufkind_real},
+      {const_cast<char*>("con_int"), 0, ASL_Sufkind_con},
+      {const_cast<char*>("con_real"), 0, ASL_Sufkind_con | ASL_Sufkind_real},
+      {const_cast<char*>("obj_int"), 0, ASL_Sufkind_obj},
+      {const_cast<char*>("obj_real"), 0, ASL_Sufkind_obj | ASL_Sufkind_real},
+      {const_cast<char*>("obj_int"), 0, ASL_Sufkind_obj},
+      {const_cast<char*>("obj_real"), 0, ASL_Sufkind_obj | ASL_Sufkind_real},
+      {const_cast<char*>("prob_int"), 0, ASL_Sufkind_prob},
+      {const_cast<char*>("prob_real"), 0, ASL_Sufkind_prob | ASL_Sufkind_real},
+         /* these are commonly associated with solvers */
+      {const_cast<char*>("direction"), 0, ASL_Sufkind_var},
+      {const_cast<char*>("lazy"), 0, ASL_Sufkind_con},
+      {const_cast<char*>("lbpen"), 0, ASL_Sufkind_var | ASL_Sufkind_real},
+      {const_cast<char*>("priority"), 0, ASL_Sufkind_var},
+      {const_cast<char*>("ref"), 0, ASL_Sufkind_var | ASL_Sufkind_real},
+      {const_cast<char*>("rhspen"), 0, ASL_Sufkind_con | ASL_Sufkind_real},
+      {const_cast<char*>("sos"), 0, ASL_Sufkind_var},
+      {const_cast<char*>("sos"), 0, ASL_Sufkind_con},
+      {const_cast<char*>("sosno"), 0, ASL_Sufkind_var | ASL_Sufkind_real},
+      {const_cast<char*>("sosref"), 0, ASL_Sufkind_var | ASL_Sufkind_real},
+      {const_cast<char*>("sstatus"), 0, ASL_Sufkind_var, 1},
+      {const_cast<char*>("sstatus"), 0, ASL_Sufkind_con, 1},
+      {const_cast<char*>("ubpen"), 0, ASL_Sufkind_var | ASL_Sufkind_real}};
 
    suf_declare(suftab, sizeof(suftab)/sizeof(SufDecl));
 
@@ -218,14 +203,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
       in.open(cols_res, std::ios_base::in);
       if (in.is_open() && in.good()) {
 	 for (int i = 0; i < n_var; ++i) {
-	    std::string input = "";
-	    in >> input;
-	    if (input == "") {
-	       break;
-	    }
-	    else {
-	       cols_map[i] = input;
-	    }
+	    in >> cols_map[i];
 	 }
       }
       else {
@@ -247,14 +225,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
       in.open(rows_res, std::ios_base::in);
       if (in.is_open() && in.good()) {
 	 for (int i = 0; i < n_con+n_obj; ++i) {
-	    std::string input = " ";
-	    in >> input;
-	    if (input == " ") {
-	       break;
-	    }
-	    else {
-	       rows_map[i] = input;
-	    }
+	    in >> rows_map[i];
 	 }
       }
       else {

@@ -1,4 +1,5 @@
 language: cpp
+sudo: false
 compiler:
  - clang
  - gcc
@@ -13,14 +14,9 @@ install:
 script:
  - test -x bin/gjh_asl_json
  - test -f lib/libAmplInterface.a
- - rm -f tests/stub.json
- - "! test -f tests/stub.json"
- - bin/gjh_asl_json tests/stub.nl
- - test -f tests/stub.json
- - rm -f tests/stub.json
- - "! test -f tests/stub.json"
- - bin/gjh_asl_json tests/stub.nl rows=tests/stub.row cols=tests/stub.col
- - test -f tests/stub.json
+ - cd tests/
+ - bash runtests.sh
+ - cd ..
  - gcov src/*
 after_success:
  - bash <(curl -s https://codecov.io/bash)

@@ -5,7 +5,10 @@ PREFIX=.
 LIB=$(PREFIX)/lib
 BIN=$(PREFIX)/bin
 
-COVERAGE=
+# Override this to inject gcov flags "-coverage -O0"
+# in travis CI script. E.g., make COVERAGE="-coverage -O0"
+COVERAGE=-O3
+
 CINC=-I$(SRC) -I$(TPL)/solvers
 CFLAGS=$(CINC) -pipe -DNDEBUG -DASL_BUILD -fPIC -DPIC -Wall
 LDFLAGS=-ldl

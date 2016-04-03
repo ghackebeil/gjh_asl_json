@@ -10,9 +10,11 @@ Installation looks something like:
  4. $ make
 
 Usage:
+
 $ gjh_asl_json stub.nl
+$ python
 ```python
-import json
-with open('stub.json') as f:
-   gjh = json.load(f)
+>>> import json
+>>> with open('stub.json') as f:
+>>>    gjh = json.load(f)
 ```

@@ -1,0 +1,7 @@
+# C extensions
+*.so
+*.o
+
+bin
+lib
+Thirdparty/solvers

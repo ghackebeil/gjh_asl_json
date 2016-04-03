@@ -319,7 +319,8 @@ void AmplInterface::write_json_summary(std::ostream& out)
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-
+   _ASSERT_(objective_count() == n_obj,
+            "Number of objectives does not match");
    out << "{" << std::endl; // JSON START
    ////////////////////////
    // PROBLEM STATISTICS //
@@ -352,7 +353,7 @@ void AmplInterface::write_json_summary(std::ostream& out)
    _ASSERT_(n_obj == 1, "multiple objectives found");
    out << "  \"total no. of variables\": " << n_var << "," << std::endl;
    out << "  \"total no. of constraints\": " << n_con << "," << std::endl;
-   out << "  \"total no. of objectives\": " << n_obj << "," << std::endl;
+   out << "  \"total no. of objectives\": " << objective_count() << "," << std::endl;
    out << "  \"objective statistics\": {" << std::endl;
    for (int objective_number = 0; objective_number < n_obj; ++objective_number) {
       out << "    \"" << rows_map[n_con+objective_number] << "\": {" << std::endl;

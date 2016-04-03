@@ -8,3 +8,11 @@ Installation looks something like:
  2. $ ./get.ASL
  3. $ cd ..
  4. $ make
+
+Usage:
+ * $ gjh_asl_json stub.nl
+ * ```python
+   import json
+   with open('stub.json') as f:
+      gjh = json.load(f)
+   ```

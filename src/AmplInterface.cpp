@@ -16,9 +16,13 @@ void _ASSERT_(bool x, std::string message) {if (!(x)) {throw std::runtime_error(
 
 AmplInterface::AmplInterface(int argc, char**& argv)
   :
-   stubname(""),
    asl_(NULL),
-   objn_(0),
+   Oinfo_ptr_(NULL),
+   primal_assumed_(1.0),
+   dual_assumed_(1.0),
+   stubname_(""),
+   objn_(-1),
+   obj_sense_(0),
    nnz_hes_lag_(-1)
 {
    rows_map.clear();
@@ -37,50 +41,68 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    asl_ = asl; // keep the pointer for ourselves to use later...
 
    // Read the options and stub
-   Option_Info* Oinfo = new Option_Info;
+   Oinfo_ptr_ = new Option_Info;
    char sname[] = "gjh_asl_json";
-   Oinfo->sname = new char[strlen(sname)+1];
-   strcpy(Oinfo->sname, sname);
+   Oinfo_ptr_->sname = new char[strlen(sname)+1];
+   strcpy(Oinfo_ptr_->sname, sname);
 
    char bsname[] = "gjh_asl_json: Version 1.0.0";
-   Oinfo->bsname = new char[strlen(bsname)+1];
-   strcpy(Oinfo->bsname, bsname);
+   Oinfo_ptr_->bsname = new char[strlen(bsname)+1];
+   strcpy(Oinfo_ptr_->bsname, bsname);
 
    char opname[] = "gjh_asl_json_options";
-   Oinfo->opname = new char[strlen(opname)+1];
-   strcpy(Oinfo->opname, opname);
+   Oinfo_ptr_->opname = new char[strlen(opname)+1];
+   strcpy(Oinfo_ptr_->opname, opname);
 
-   int options_count = 2;
+   int options_count = 5;
    char* rows_res(NULL);
    char* cols_res(NULL);
    keyword keywords[] = {/* must be alphabetical */
       /* one may notice that I'm going overboard here to shut up warnings
 	 about 'deprecated conversion from string const to char*' */
-      KW(const_cast<char*>("cols"),C_val,&cols_res,const_cast<char*>("- Map of variable names to variable ids")),
-      KW(const_cast<char*>("rows"),C_val,&rows_res,const_cast<char*>("- Map of constraint names to constraint ids"))};
+      KW(const_cast<char*>("assumed_dual"),
+         D_val,
+         &dual_assumed_,
+         const_cast<char*>("Assumed value of dual when not specified (default: 1)")),
+      KW(const_cast<char*>("assumed_primal"),
+         D_val,
+         &primal_assumed_,
+         const_cast<char*>("Assumed value of primal when not specified (default: 1)")),
+      KW(const_cast<char*>("cols"),
+         C_val,
+         &cols_res,
+         const_cast<char*>("Map of variable names to variable ids")),
+      KW(const_cast<char*>("rows"),
+         C_val,
+         &rows_res,
+         const_cast<char*>("Map of constraint names to constraint ids")),
+      KW(const_cast<char*>("wantsol"),
+         WS_val,
+         NULL,
+         WS_desc_ASL+5)};
 
-   Oinfo->keywds = keywords;
-   Oinfo->n_keywds = options_count;
-   Oinfo->flags = 0;
-   Oinfo->version = NULL;
-   Oinfo->usage = NULL;
-   Oinfo->kwf = NULL;
-   Oinfo->feq = NULL;
-   Oinfo->options = NULL;
-   Oinfo->n_options = 0;
-   Oinfo->driver_date = 0;
-   Oinfo->wantsol = 0;
-   Oinfo->nS = 0;
-   Oinfo->S = NULL;
-   Oinfo->uinfo = NULL;
-   Oinfo->asl = NULL;
-   Oinfo->eqsign = NULL;
-   Oinfo->n_badopts = 0;
-   Oinfo->option_echo = 0;
-   Oinfo->nnl = 0;
+   Oinfo_ptr_->keywds = keywords;
+   Oinfo_ptr_->n_keywds = options_count;
+   Oinfo_ptr_->flags = 0;
+   Oinfo_ptr_->version = NULL;
+   Oinfo_ptr_->usage = NULL;
+   Oinfo_ptr_->kwf = NULL;
+   Oinfo_ptr_->feq = NULL;
+   Oinfo_ptr_->options = NULL;
+   Oinfo_ptr_->n_options = 0;
+   Oinfo_ptr_->driver_date = 0;
+   Oinfo_ptr_->wantsol = 0;
+   Oinfo_ptr_->nS = 0;
+   Oinfo_ptr_->S = NULL;
+   Oinfo_ptr_->uinfo = NULL;
+   Oinfo_ptr_->asl = NULL;
+   Oinfo_ptr_->eqsign = NULL;
+   Oinfo_ptr_->n_badopts = 0;
+   Oinfo_ptr_->option_echo = 0;
+   Oinfo_ptr_->nnl = 0;
 
    // read the options and get the name of the .nl file (stub)
-   char* stub = getstops(argv, Oinfo);
+   char* stub = getstops(argv, Oinfo_ptr_);
 
    // Try to handle most of the input suffixes commonly
    // handled by solvers. Is there a way to except any
@@ -118,7 +140,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    suf_declare(suftab, sizeof(suftab)/sizeof(SufDecl));
 
    _ASSERT_(stub != NULL, "ASL Error: nl filename pointer is NULL");
-   stubname = std::string(stub);
+   stubname_ = std::string(stub);
 
    FILE* nl = NULL;
    nl = jac0dim(stub, (int)strlen(stub));
@@ -188,14 +210,6 @@ AmplInterface::AmplInterface(int argc, char**& argv)
       break;
    }
 
-   // get the sense of the obj function (1 for min or -1 for max)
-   obj_sense_.resize(n_obj,1);
-   for (int i = 0; i < n_obj; ++i) {
-      if (objtype[i] != 0) {
-	 obj_sense_[i] = -1;
-      }
-   }
-
    // Build the variable and constraint output maps
    // use .col/.row files if supplied as options
    if (cols_res) {
@@ -241,34 +255,70 @@ AmplInterface::AmplInterface(int argc, char**& argv)
 	 stream << i;
 	 rows_map[i] = stream.str();
       }
+      for (int i = 0; i < n_obj; ++i) {
+	 std::ostringstream stream;
+	 stream << i;
+	 rows_map[n_con+i] = stream.str();
+      }
    }
 
-   // delete options object
-   delete [] Oinfo->sname;
-   Oinfo->sname = NULL;
-   delete [] Oinfo->bsname;
-   Oinfo->bsname = NULL;
-   delete [] Oinfo->opname;
-   Oinfo->opname = NULL;
-   delete Oinfo;
-   Oinfo = NULL;
-
-   set_objective(0);
+   set_current_objective(0);
 }
 
-void AmplInterface::WriteSummary(std::ostream& out)
+AmplInterface::~AmplInterface()
+{
+   ASL_pfgh* asl = asl_;
+
+   delete [] havex0;
+   havex0 = NULL;
+   delete [] havepi0;
+   havepi0 = NULL;
+
+   // delete options object
+   delete [] Oinfo_ptr_->sname;
+   Oinfo_ptr_->sname = NULL;
+   delete [] Oinfo_ptr_->bsname;
+   Oinfo_ptr_->bsname = NULL;
+   delete [] Oinfo_ptr_->opname;
+   Oinfo_ptr_->opname = NULL;
+   delete Oinfo_ptr_;
+   Oinfo_ptr_ = NULL;
+
+   if (asl) {
+     ASL* asl_to_free = (ASL*)asl_;
+     ASL_free(&asl_to_free);
+     asl_ = NULL;
+   }
+
+   // output maps
+   rows_map.clear();
+   cols_map.clear();
+
+   stubname_ = std::string("");
+   objn_ = -1;
+   obj_sense_ = -1;
+   nnz_hes_lag_ = -1;
+}
+
+void AmplInterface::write_solution_file()
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-   int tmpx;
-   int tmpc;
-   int tmpnnzjacc;
-   int tmpnnzheslag;
-   get_nlp_dimensions(tmpx, tmpc, tmpnnzjacc, tmpnnzheslag);
-   _ASSERT_(tmpx == n_var, "Number of vars does not match");
-   _ASSERT_(tmpc == n_con, "Number of cons does not match");
-   _ASSERT_(tmpnnzjacc == nzc, "Number nonzeros in constraints jacobian does not match");
-   _ASSERT_(tmpnnzheslag == nnz_hes_lag_, "Number of nonzeros in lagrangian hessian does not match");
+
+   std::vector<double> start_primal_dense(n_var);
+   std::vector<double> start_dual_dense(n_con);
+   primal_starting_point(&(start_primal_dense[0]));
+   dual_starting_point(&(start_dual_dense[0]));
+   write_sol("",
+             &(start_primal_dense[0]),
+             &(start_dual_dense[0]),
+             (Option_Info*)Oinfo_ptr_);
+}
+
+void AmplInterface::write_json_summary(std::ostream& out)
+{
+   ASL_pfgh* asl = asl_;
+   _ASSERT_(asl_, "Found NULL for asl struct pointer");
 
    out << "{" << std::endl; // JSON START
    ////////////////////////
@@ -297,20 +347,41 @@ void AmplInterface::WriteSummary(std::ostream& out)
    out << "  \"integer nonlinear vars just in objectives\": " << nlvoi << "," << std::endl;
    out << "  \"no. of (linear) network variables (arcs)\": " << nwv << "," << std::endl;
    out << "  \"no. of nonzeros in constraints' Jacobian\": " << nzc << "," << std::endl;
+   out << "  \"no. of logical constraints\": " << n_lcon << "," << std::endl;
    out << "  \"no. of nonzeros in all objective gradients\": " << nzo << "," << std::endl;
    _ASSERT_(n_obj == 1, "multiple objectives found");
-   // This one is precomputed in the constructor
-   out << "  \"no. of nonzeros in full lagrangian hessian\": " << nnz_hes_lag_ << "," << std::endl;
    out << "  \"total no. of variables\": " << n_var << "," << std::endl;
    out << "  \"total no. of constraints\": " << n_con << "," << std::endl;
    out << "  \"total no. of objectives\": " << n_obj << "," << std::endl;
-   if (obj_sense_[objn_] == -1) {
-      out << "  \"objective sense\": " << "\"maximize\"" << "," << std::endl;
+   out << "  \"objective statistics\": {" << std::endl;
+   for (int objective_number = 0; objective_number < n_obj; ++objective_number) {
+      out << "    \"" << rows_map[n_con+objective_number] << "\": {" << std::endl;
+      set_current_objective(objective_number);
+      int tmpx;
+      int tmpc;
+      int tmpnnzjacc;
+      int tmpnnzheslag;
+      nlp_dimensions(tmpx, tmpc, tmpnnzjacc, tmpnnzheslag);
+      _ASSERT_(tmpx == n_var,
+               "Number of vars does not match");
+      _ASSERT_(tmpc == n_con,
+               "Number of cons does not match");
+      _ASSERT_(tmpnnzjacc == nzc,
+               "Number nonzeros in constraints jacobian does not match");
+      _ASSERT_(tmpnnzheslag == nnz_hes_lag_,
+               "Number of nonzeros in lagrangian hessian does not match");
+      if (current_objective_sense() == -1) {
+         out << "      \"objective sense\": " << "\"maximize\"" << "," << std::endl;
+      }
+      else if (current_objective_sense() == 1) {
+         out << "      \"objective sense\": " << "\"minimize\"" << "," << std::endl;
+      }
+      out << "        \"no. of nonzeros in full lagrangian hessian\": " << nnz_hes_lag_ << std::endl;
+      out << "    }";
+      if (objective_number < n_obj-1) {out << ",";}
+      out << std::endl;
    }
-   else if (obj_sense_[objn_] == 1) {
-      out << "  \"objective sense\": " << "\"minimize\"" << "," << std::endl;
-   }
-   out << "  \"no. of logical constraints\": " << n_lcon << std::endl;
+   out << "  }" << std::endl; // end OBJECTIVE STATISTICS
    out << "}," << std::endl; // end PROBLEM STATISTICS
 
    /////////////////////
@@ -456,7 +527,7 @@ void AmplInterface::WriteSummary(std::ostream& out)
 	 if (d.u.i) {
 	    for (int j = 0; j < n_obj; ++j) {
 	       if (d.u.i[j] != 0) {
-		  out << "      \"" << j << "\": " << d.u.i[j];
+		  out << "      \"" << rows_map[n_con+j] << "\": " << d.u.i[j];
 		  // check if anything else will output, if so we need a comma
 		  for (int k=j+1; k < n_obj; ++k) {
 		     if (d.u.i[k] != 0) {
@@ -471,7 +542,7 @@ void AmplInterface::WriteSummary(std::ostream& out)
 	 if (d.u.r) {
 	    for (int j = 0; j < n_obj; ++j) {
 	       if (d.u.r[j] != 0) {
-		  out << "      \"" << j << "\": " << d.u.r[j];
+		  out << "      \"" << rows_map[n_con+j] << "\": " << d.u.r[j];
 		  // check if anything else will output, if so we need a comma
 		  for (int k=j+1; k < n_obj; ++k) {
 		     if (d.u.r[k] != 0) {
@@ -552,8 +623,8 @@ void AmplInterface::WriteSummary(std::ostream& out)
    //////////////////////////////
    out << "\"supplied starting points\": {" << std::endl;
    std::map<int,double> start_primal_sparse, start_dual_sparse;
-   get_primal_starting_point(start_primal_sparse);
-   get_dual_starting_point(start_dual_sparse);
+   primal_starting_point(start_primal_sparse);
+   dual_starting_point(start_dual_sparse);
    out << "  \"primal\": {" << std::endl;
    for (std::map<int,double>::iterator pos = start_primal_sparse.begin(),
            pos_stop = start_primal_sparse.end();
@@ -578,14 +649,12 @@ void AmplInterface::WriteSummary(std::ostream& out)
    // ASSUMED STARTING POINTS //
    /////////////////////////////
    out << "\"assumed starting points\": {" << std::endl;
-   double primal_assumed = 1.0;
-   double dual_assumed = 1.0;
-   std::vector<double> start_primal_dense(n_var,primal_assumed);
-   std::vector<double> start_dual_dense(n_con,dual_assumed);
-   get_primal_starting_point(&(start_primal_dense[0]));
-   get_dual_starting_point(&(start_dual_dense[0]));
-   out << "  \"primal\": " << primal_assumed << "," << std::endl;
-   out << "  \"dual\": " << dual_assumed << std::endl;
+   std::vector<double> start_primal_dense(n_var, primal_assumed_);
+   std::vector<double> start_dual_dense(n_con, dual_assumed_);
+   primal_starting_point(&(start_primal_dense[0]));
+   dual_starting_point(&(start_dual_dense[0]));
+   out << "  \"primal\": " << primal_assumed_ << "," << std::endl;
+   out << "  \"dual\": " << dual_assumed_ << std::endl;
    out << "}," << std::endl; // end ASSUMED STARTING POINTS
 
    /////////////////////
@@ -593,7 +662,7 @@ void AmplInterface::WriteSummary(std::ostream& out)
    /////////////////////
    out << "\"variable bounds\": {" << std::endl;
    std::vector<double> XL(n_var), XU(n_var);
-   get_var_bounds(&(XL[0]),&(XU[0]));
+   var_bounds(&(XL[0]),&(XU[0]));
    for (int i = 0; i < n_var; ++i) {
       std::ostringstream XLs;
       std::ostringstream XUs;
@@ -614,7 +683,7 @@ void AmplInterface::WriteSummary(std::ostream& out)
    ///////////////////////
    out << "\"constraint bounds\": {" << std::endl;
    std::vector<double> CL(n_con), CU(n_con);
-   get_con_bounds(&(CL[0]),&(CU[0]));
+   con_bounds(&(CL[0]),&(CU[0]));
    for (int i = 0; i < n_con; ++i) {
       std::ostringstream CLs;
       std::ostringstream CUs;
@@ -634,23 +703,51 @@ void AmplInterface::WriteSummary(std::ostream& out)
    // INITIAL EVALUATIONS //
    /////////////////////////
    out << "\"initial evaluations\": {" << std::endl;
-   // objective
-   double F = 0.0;
-   eval_f(&(start_primal_dense[0]),F);
-   out << "  \"objective function\": " << F << "," << std::endl;
-   // derivative of objective
-   std::vector<double> deriv_F(n_var);
-   eval_deriv_f(&(start_primal_dense[0]),&(deriv_F[0]));
-   out << "  \"objective gradient\": {" << std::endl;
-   for (int i = 0; i < n_var; ++i) {
-      out << "    \"" << cols_map[i] << "\": " << deriv_F[i];
-      if (i < n_var-1) {out << ",";}
+   out << "  \"objective function\": {" << std::endl;
+   std::vector<double> con_eval(n_con);
+   for (int objective_number = 0; objective_number < n_obj; ++objective_number) {
+      out << "    \"" << rows_map[n_con+objective_number] << "\": {" << std::endl;
+      set_current_objective(objective_number);
+
+      // objective
+      double F = 0.0;
+      eval_f(&(start_primal_dense[0]),F);
+      // so we can call eval_hes_lag
+      eval_c(&(start_primal_dense[0]), &(con_eval[0]));
+      out << "      \"value\": " << F << "," << std::endl;
+
+      // derivative of objective
+      std::vector<double> deriv_F(n_var);
+      eval_deriv_f(&(start_primal_dense[0]),&(deriv_F[0]));
+      out << "      \"gradient\": {" << std::endl;
+      for (int i = 0; i < n_var; ++i) {
+         out << "        \"" << cols_map[i] << "\": " << deriv_F[i];
+         if (i < n_var-1) {out << ",";}
+         out << std::endl;
+      }
+      out << "      }," << std::endl; // end objective gradient
+
+      // lagrangian hessian
+      out << "      \"lagrangian hessian\": {" << std::endl;
+      if (nnz_hes_lag_ > 0) {
+         std::vector<int> hlag_irow(nnz_hes_lag_), hlag_jcol(nnz_hes_lag_);
+         struct_hes_lag(&(hlag_irow[0]),&(hlag_jcol[0]));
+         std::vector<double> hlag_vals(nnz_hes_lag_);
+         eval_hes_lag(&(start_dual_dense[0]),&(hlag_vals[0]));
+         for (int i = 0; i < nnz_hes_lag_; ++i) {
+            out << "        \"" << cols_map[hlag_irow[i]] << "_" << cols_map[hlag_jcol[i]] << "\": " << hlag_vals[i];
+            if (i < nnz_hes_lag_-1) {out << ",";}
+            out << std::endl;
+         }
+      }
+      out << "      }" << std::endl; // end lagrangian hessian
+      out << "    }";
+      if (objective_number < n_obj-1) {out << ",";}
       out << std::endl;
    }
-   out << "  }," << std::endl; // end objective gradient
+   out << "  }," << std::endl; // end OBJECTIVE FUNCTION
 
    // constraints
-   std::vector<double> con_eval(n_con);
    eval_c(&(start_primal_dense[0]),&(con_eval[0]));
    out << "  \"constraints\": {" << std::endl;
    for (int i = 0; i < n_con; ++i) {
@@ -671,55 +768,34 @@ void AmplInterface::WriteSummary(std::ostream& out)
       if (i < nzc-1) {out << ",";}
       out << std::endl;
    }
-   out << "  }," << std::endl; // end constraints' jacobian
-
-   // lagrangian hessian
-   out << "  \"lagrangian hessian\": {" << std::endl;
-   if (nnz_hes_lag_ > 0) {
-      std::vector<int> hlag_irow(nnz_hes_lag_), hlag_jcol(nnz_hes_lag_);
-      struct_hes_lag(&(hlag_irow[0]),&(hlag_jcol[0]));
-      std::vector<double> hlag_vals(nnz_hes_lag_);
-      eval_hes_lag(&(start_dual_dense[0]),&(hlag_vals[0]));
-      for (int i = 0; i < nnz_hes_lag_; ++i) {
-	 out << "    \"" << cols_map[hlag_irow[i]] << "_" << cols_map[hlag_jcol[i]] << "\": " << hlag_vals[i];
-	 if (i < nnz_hes_lag_-1) {out << ",";}
-	 out << std::endl;
-      }
-   }
-   out << "  }" << std::endl; // end lagrangian hessian
+   out << "  }" << std::endl; // end constraints' jacobian
    out << "}" << std::endl; // end INITIAL EVALUATIONS
    out << "}" << std::endl; // JSON STOP
 }
 
-AmplInterface::~AmplInterface()
+int AmplInterface::objective_count()
 {
    ASL_pfgh* asl = asl_;
-
-   delete [] havex0;
-   havex0 = NULL;
-   delete [] havepi0;
-   havepi0 = NULL;
-
-   if (asl) {
-     ASL* asl_to_free = (ASL*)asl_;
-     ASL_free(&asl_to_free);
-     asl_ = NULL;
-   }
-
-   // output maps
-   rows_map.clear();
-   cols_map.clear();
-
-   stubname = std::string("");
+   _ASSERT_(asl_, "Found NULL for asl struct pointer");
+   return n_obj;
 }
 
-void AmplInterface::set_objective(int objective_number) {
+void AmplInterface::set_current_objective(int objective_number)
+{
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-   _ASSERT_(objective_number >= 0, "objective id must be non-negative when calling set_objective");
-   _ASSERT_(objective_number < n_obj, "found invalid objective id when calling set_objective");
+   _ASSERT_(objective_number >= 0,
+            "objective id must be non-negative when calling set_objective");
+   _ASSERT_(objective_number < n_obj,
+            "found invalid objective id when calling set_objective");
 
    objn_ = objective_number;
+   if (objtype[objective_number] != 0) {
+      obj_sense_ = -1;
+   }
+   else {
+      obj_sense_ = 1;
+   }
 
    int mult_supplied = 1; // multipliers will be supplied
    // I specifically ask for the entire matrix (even though it is
@@ -732,23 +808,25 @@ void AmplInterface::set_objective(int objective_number) {
    nnz_hes_lag_ = sphsetup(objn_, NULL, mult_supplied, uptri);
 }
 
-void AmplInterface::get_nlp_dimensions(int& n_x, int& n_c, int& nnz_jac_c, int& nnz_hes_lag) const
+void AmplInterface::nlp_dimensions(int& n_x,
+                                   int& n_c,
+                                   int& nnz_jac_c,
+                                   int& nnz_hes_lag) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-
-   n_x = n_var; // # of variables (variable types have been asserted in the constructor
-   n_c = n_con; // # of constraints
-   nnz_jac_c = nzc; // # of non-zeros in the jacobian
-   nnz_hes_lag = nnz_hes_lag_; // # of non-zeros in the hessian
+   n_x = n_var;
+   n_c = n_con;
+   nnz_jac_c = nzc;
+   nnz_hes_lag = nnz_hes_lag_;
 }
 
-void AmplInterface::get_con_bounds(double* c_l, double* c_u) const
+void AmplInterface::con_bounds(double* c_l, double* c_u) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
    if (n_con == 0) {return ;} // unconstrained problem
-   _ASSERT_(c_l && c_u, "One or more arguments to get_con_bounds is NULL");
+   _ASSERT_(c_l && c_u, "One or more arguments to con_bounds is NULL");
 
    for (int i = 0; i < n_con; ++i) {
       c_l[i] = LUrhs[2*i];
@@ -756,11 +834,11 @@ void AmplInterface::get_con_bounds(double* c_l, double* c_u) const
    }
 }
 
-void AmplInterface::get_var_bounds(double* x_l, double* x_u) const
+void AmplInterface::var_bounds(double* x_l, double* x_u) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-   _ASSERT_(x_l && x_u, "One or more arguments to get_var_bounds is NULL");
+   _ASSERT_(x_l && x_u, "One or more arguments to var_bounds is NULL");
 
    for (int i = 0; i < n_var; ++i) {
       x_l[i] = LUv[2*i];
@@ -882,21 +960,24 @@ void AmplInterface::eval_hes_lag(const double* lam_c, double* hes_lag) const
    }
 }
 
-void AmplInterface::get_dual_starting_point(double* x) const
+void AmplInterface::dual_starting_point(double* x) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
    if (n_con == 0) {return ;} // unconstrained problem
-   _ASSERT_(x, "Argument of get_dual_starting_point is NULL");
+   _ASSERT_(x, "Argument of dual_starting_point is NULL");
 
    for (int i = 0; i < n_con; ++i) {
       if (havepi0[i]) {
 	 x[i] = pi0[i];
       }
+      else {
+         x[i] = dual_assumed_;
+      }
    }
 }
 
-void AmplInterface::get_dual_starting_point(std::map<int,double>& x) const
+void AmplInterface::dual_starting_point(std::map<int,double>& x) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
@@ -911,20 +992,23 @@ void AmplInterface::get_dual_starting_point(std::map<int,double>& x) const
 }
 
 
-void AmplInterface::get_primal_starting_point(double* x) const
+void AmplInterface::primal_starting_point(double* x) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");
-   _ASSERT_(x, "Argument of get_primal_starting_point is NULL");
+   _ASSERT_(x, "Argument of primal_starting_point is NULL");
 
    for (int i = 0; i < n_var; ++i) {
       if (havex0[i]) {
 	 x[i] = X0[i];
       }
+      else {
+         x[i] = primal_assumed_;
+      }
    }
 }
 
-void AmplInterface::get_primal_starting_point(std::map<int,double>& x) const
+void AmplInterface::primal_starting_point(std::map<int,double>& x) const
 {
    ASL_pfgh* asl = asl_;
    _ASSERT_(asl_, "Found NULL for asl struct pointer");

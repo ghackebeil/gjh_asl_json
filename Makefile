@@ -9,7 +9,7 @@ BIN=$(PREFIX)/bin
 COVERAGE=-O3
 
 CINC=-I$(SRC) -I$(TPL)/solvers
-CFLAGS=$(CINC) -pipe -DNDEBUG -DASL_BUILD -fPIC -DPIC -Wall
+CFLAGS= -pipe -DASL_BUILD -fPIC -DPIC -Wall
 LDFLAGS=-ldl
 
 all: 	$(TPL)/solvers/amplsolver.a \
@@ -19,10 +19,10 @@ $(BIN)/gjh_asl_json: $(SRC)/gjh_asl_json.o \
 	             $(SRC)/AmplInterface.o \
 		     $(TPL)/solvers/amplsolver.a
 	@mkdir -p $(BIN)
-	$(CXX) $(COVERAGE) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CXX) $(COVERAGE) $(CFLAGS) $(CINC) $^ $(LDFLAGS) -o $@
 
 %.o : %.cpp $(SRC)/AmplInterface.hpp
-	$(CXX) $(COVERAGE) $(CFLAGS) -c $< -o $@
+	$(CXX) $(COVERAGE) $(CFLAGS) $(CINC) -c $< -o $@
 
 $(TPL)/solvers/amplsolver.a :
 	make -C $(TPL)/solvers/;

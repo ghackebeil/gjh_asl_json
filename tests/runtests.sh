@@ -5,24 +5,37 @@
 
 set -e
 
-# stub1.nl
 rm -f stub1.json
+rm -f stub1.sol
+
+# stub1.nl
 ! test -f stub1.json
 cmd="../bin/gjh_asl_json stub1.nl"
 echo "Testing command: ${cmd}"
 ${cmd}
 test -f stub1.json
 python -c "import json; f = open('stub1.json'); json.load(f); f.close()"
+rm -f stub1.json
+
+# stub1.nl with -s
+! test -f stub1.json
+! test -f stub1.sol
+cmd="../bin/gjh_asl_json -s stub1.nl"
+echo "Testing command: ${cmd}"
+${cmd}
+test -f stub1.json
+test -f stub1.sol
+python -c "import json; f = open('stub1.json'); json.load(f); f.close()"
+rm -f stub1.json
+rm -f stub1.sol
 
 # stub1.nl with row and col labels
-rm -f stub1.json
 ! test -f stub1.json
 cmd="../bin/gjh_asl_json stub1.nl rows=stub1.row cols=stub1.col"
 echo "Testing command: ${cmd}"
 ${cmd}
 test -f stub1.json
 python -c "import json; f = open('stub1.json'); json.load(f); f.close()"
-
 rm -f stub1.json
 
 # stub2.nl

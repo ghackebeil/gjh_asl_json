@@ -25,8 +25,9 @@
 #include <map>
 #include <string>
 
-/* forward declaration */
+/* forward declarations */
 struct ASL_pfgh;
+struct Option_Info;
 
 class AmplInterface
 {
@@ -35,18 +36,45 @@ public:
 
    virtual ~AmplInterface();
 
-   void WriteSummary(std::ostream& out);
+   // get the nl file stub name
+   std::string get_stubname() const {return stubname_;}
+
+   // write a sol file
+   void write_solution_file();
+
+   // summarize everything in JSON format
+   void write_json_summary(std::ostream& out);
+
+   double dual_assumed() const {return dual_assumed_;}
+   double primal_assumed() const {return primal_assumed_;}
+
+   void set_dual_assumed(double x) {dual_assumed_ = x;}
+   void set_primal_assumed(double x) {primal_assumed_ = x;}
+
+   // get the current objective
+   int current_objective() const {return objn_;}
+
+   // get the number of objectives for this NLP
+   int objective_count();
 
    // Sets up interface for subsequent calls to
    // struct_hes_lag and eval_hes_lag
    // and determines nnz_hes_lag_ for the current objective
-   void set_objective(int objective_number);
+   void set_current_objective(int objective_number);
 
-   void get_nlp_dimensions(int& n_x, int& n_c, int& nnz_jac_c, int& nnz_hes_lag) const;
+   // return the objective sense for the current objective
+   // -1 = maximize, 1 = minimize
+   int current_objective_sense() const {return obj_sense_;}
 
-   void get_con_bounds(double* c_l, double* c_u) const;
+   // called after setting each objective
+   void nlp_dimensions(int& n_x,
+                       int& n_c,
+                       int& nnz_jac_c,
+                       int& nnz_hes_lag) const;
 
-   void get_var_bounds(double* x_l, double* x_u) const;
+   void con_bounds(double* c_l, double* c_u) const;
+
+   void var_bounds(double* x_l, double* x_u) const;
 
    void eval_f(const double* x, double& f) const;
 
@@ -64,17 +92,15 @@ public:
    // (i.e. You must call eval_f and eval_c with the same x before calling this)
    void eval_hes_lag(const double* lam_c, double* hes_lag) const;
 
-   void get_primal_starting_point(double* x) const;
+   void primal_starting_point(double* x) const;
    // sparse version, map is cleared, then filled with only
    // user supplied values
-   void get_primal_starting_point(std::map<int,double>& x) const;
+   void primal_starting_point(std::map<int,double>& x) const;
 
-   void get_dual_starting_point(double* x) const;
+   void dual_starting_point(double* x) const;
    // sparse version, map is cleared, then filled with only
    // user supplied values
-   void get_dual_starting_point(std::map<int,double>& x) const;
-
-   std::string stubname;
+   void dual_starting_point(std::map<int,double>& x) const;
 
 private:
 
@@ -89,12 +115,22 @@ private:
 
    // ASL pointer
    ASL_pfgh* asl_;
+   Option_Info* Oinfo_ptr_;
+
+   // Assumed primal starting point, when not explicitly given
+   double primal_assumed_;
+
+   // Assumed primal starting point, when not explicitly given
+   double dual_assumed_;
+
+   // stub file name
+   std::string stubname_;
 
    // keep track if which objective is being used
    int objn_;
 
    // obj. sense ... -1 = maximize, 1 = minimize
-   std::vector<double> obj_sense_;
+   int obj_sense_;
 
    // number of nonzeros in the hessian
    int nnz_hes_lag_;

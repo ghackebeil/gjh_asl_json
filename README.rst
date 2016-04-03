@@ -9,7 +9,7 @@ gjh_asl_json
 
 A simple tool providing similar functionality to that of the gjh
 "solver" distributed with the AMPL Solver Library. NLP information
-is summarized in a JSON formatted output file.
+is summarized in a JSON-formatted output file.
 
 Installation
 ~~~~~~~~~~~~

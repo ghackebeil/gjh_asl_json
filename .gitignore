@@ -3,5 +3,4 @@
 *.o
 
 bin
-lib
 Thirdparty/solvers

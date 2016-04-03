@@ -10,3 +10,6 @@ install:
  - ./get.ASL
  - cd ..
  - make
+script:
+ - test -f bin/gjh_asl_json
+ - test -f lib/junk

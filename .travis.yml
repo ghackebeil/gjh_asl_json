@@ -11,5 +11,8 @@ install:
  - cd ..
  - make
 script:
- - test -f bin/gjh_asl_json
- - test -f lib/junk
+ - test -x bin/gjh_asl_json
+ - test -f lib/libAmplInterface.a
+ - make clean
+ - ! test -f bin/gjh_asl_json
+ - ! test -f lib/libAmplInterface.a

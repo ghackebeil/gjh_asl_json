@@ -14,16 +14,16 @@ is summarized in a JSON-formatted output file.
 Installation
 ~~~~~~~~~~~~
 
- 1. $ cd Thirdparty/
- 2. $ ./get.ASL
- 3. $ cd ..
- 4. $ make
+1. $ cd Thirdparty/
+2. $ ./get.ASL
+3. $ cd ..
+4. $ make
 
 Usage
 ~~~~~
 
- 1. $ gjh_asl_json stub.nl rows=stub.row cols=stub.col
- 2. $ python
+1. $ gjh_asl_json stub.nl rows=stub.row cols=stub.col
+2. $ python
 
 .. code-block:: pycon
 

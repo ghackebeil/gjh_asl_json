@@ -1,8 +1,10 @@
 language: cpp
 sudo: false
 compiler:
- - clang COVCMD='llvm-cov'
- - gcc COVCMD='gcov'
+ - clang
+   env: COVCMD="llvm-cov"
+ - gcc
+   env: COVCMD="gcov"
 os:
  - linux
  - osx

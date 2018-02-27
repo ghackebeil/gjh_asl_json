@@ -4,13 +4,13 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: COVCMD="llvm-cov"
+      env: COVCMD="llvm-cov gcov"
     - os: linux
       compiler: gcc
       env: COVCMD="gcov"
     - os: osx
       compiler: clang
-      env: COVCMD="llvm-cov"
+      env: COVCMD="llvm-cov gcov"
     - os: osx
       compiler: gcc
       env: COVCMD="gcov"

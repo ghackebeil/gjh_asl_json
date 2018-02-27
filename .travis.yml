@@ -1,13 +1,19 @@
 language: cpp
 sudo: false
-compiler:
- - clang
-   env: COVCMD="llvm-cov"
- - gcc
-   env: COVCMD="gcov"
-os:
- - linux
- - osx
+matrix:
+  include:
+    - os: linux
+      compiler: clang
+      env: COVCMD="llvm-cov"
+    - os: linux
+      compiler: gcc
+      env: COVCMD="gcov"
+    - os: osx
+      compiler: clang
+      env: COVCMD="llvm-cov"
+    - os: osx
+      compiler: gcc
+      env: COVCMD="gcov"
 install:
  - cd Thirdparty/
  - ./get.ASL

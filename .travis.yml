@@ -1,8 +1,8 @@
 language: cpp
 sudo: false
 compiler:
- - clang
- - gcc
+ - clang COVCMD='llvm-cov'
+ - gcc COVCMD='gcov'
 os:
  - linux
  - osx
@@ -12,11 +12,12 @@ install:
  - cd ..
  - make COVERAGE="-coverage -O0"
 script:
+ - echo ${COVCMD}
  - test -x bin/gjh_asl_json
  - cd tests/
  - bash runtests.sh
  - cd ..
- - gcov src/*
+ - ${COVCMD} src/*
 after_success:
  - bash <(curl -s https://codecov.io/bash)
 after_script:

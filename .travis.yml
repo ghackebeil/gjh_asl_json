@@ -10,7 +10,7 @@ matrix:
       env: COVCMD="gcov"
     - os: osx
       compiler: clang
-      env: COVCMD="llvm-cov gcov"
+      env: COVCMD="gcov"
     - os: osx
       compiler: gcc
       env: COVCMD="gcov"
@@ -27,7 +27,7 @@ script:
  - cd ..
  - ${COVCMD} src/*
 after_success:
- - bash <(curl -s https://codecov.io/bash)
+ - bash <(curl -s https://codecov.io/bash) -X gcov
 after_script:
  - make clean
  - "! test -f bin/gjh_asl_json"

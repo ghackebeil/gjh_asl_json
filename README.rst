@@ -4,8 +4,8 @@ gjh_asl_json
 .. image:: https://travis-ci.org/ghackebeil/gjh_asl_json.svg?branch=master
     :target: https://travis-ci.org/ghackebeil/gjh_asl_json
 
-.. image:: https://codecov.io/github/ghackebeil/gjh_asl_json/coverage.svg?branch=master
-    :target: https://codecov.io/github/ghackebeil/gjh_asl_json?branch=master
+.. image:: https://codecov.io/gh/ghackebeil/gjh_asl_json/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/ghackebeil/gjh_asl_json
 
 A simple tool providing similar functionality to that of the gjh
 "solver" distributed with the AMPL Solver Library. NLP information

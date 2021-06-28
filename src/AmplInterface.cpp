@@ -21,6 +21,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    primal_assumed_(1.0),
    dual_assumed_(1.0),
    stubname_(""),
+   jsonname_(""),
    objn_(-1),
    obj_sense_(0),
    nnz_hes_lag_(-1)
@@ -46,7 +47,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    Oinfo_ptr_->sname = new char[strlen(sname)+1];
    strcpy(Oinfo_ptr_->sname, sname);
 
-   char bsname[] = "gjh_asl_json: Version 1.0.0";
+   char bsname[] = "gjh_asl_json: Version 1.1.0";
    Oinfo_ptr_->bsname = new char[strlen(bsname)+1];
    strcpy(Oinfo_ptr_->bsname, bsname);
 
@@ -57,6 +58,7 @@ AmplInterface::AmplInterface(int argc, char**& argv)
    int options_count = 5;
    char* rows_res(NULL);
    char* cols_res(NULL);
+   char* json_res(NULL);
    keyword keywords[] = {/* must be alphabetical */
       /* one may notice that I'm going overboard here to shut up warnings
 	 about 'deprecated conversion from string const to char*' */
@@ -72,6 +74,10 @@ AmplInterface::AmplInterface(int argc, char**& argv)
          C_val,
          &cols_res,
          const_cast<char*>("Map of variable names to variable ids")),
+      KW(const_cast<char*>("json"),
+         C_val,
+         &json_res,
+         const_cast<char*>("Name of output JSON file")),
       KW(const_cast<char*>("rows"),
          C_val,
          &rows_res,
@@ -141,6 +147,11 @@ AmplInterface::AmplInterface(int argc, char**& argv)
 
    _ASSERT_(stub != NULL, "ASL Error: nl filename pointer is NULL");
    stubname_ = std::string(stub);
+   if (json_res) {
+      jsonname_ = std::string(json_res);
+   } else {
+      jsonname_ = stubname_ + ".json";
+   }
 
    FILE* nl = NULL;
    nl = jac0dim(stub, (int)strlen(stub));

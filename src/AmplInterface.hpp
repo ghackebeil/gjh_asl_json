@@ -39,6 +39,9 @@ public:
    // get the nl file stub name
    std::string get_stubname() const {return stubname_;}
 
+   // get the output json file name
+   std::string get_jsonname() const {return jsonname_;}
+
    // write a sol file
    void write_solution_file();
 
@@ -125,6 +128,9 @@ private:
 
    // stub file name
    std::string stubname_;
+
+   // json file name
+   std::string jsonname_;
 
    // keep track if which objective is being used
    int objn_;

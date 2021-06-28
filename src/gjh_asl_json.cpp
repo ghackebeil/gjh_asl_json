@@ -7,7 +7,7 @@ int main(int argc, char** argv)
 {
    AmplInterface solver(argc, argv);
 
-   std::string output_name = solver.get_stubname()+".json";
+   std::string output_name = solver.get_jsonname();
 
    std::ofstream out;
    out.open(output_name.c_str(), std::ios::out | std::ios::trunc);

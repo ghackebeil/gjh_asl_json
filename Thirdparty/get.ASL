@@ -3,7 +3,8 @@
 set -e
 
 rm -f solvers.tgz
-wget http://www.ampl.com/netlib/ampl/solvers.tgz
+wget http://www.ampl.com/netlib/ampl/solvers.tgz \
+  || wget http://www.ampl.com/netlib/solvers.tgz
 rm -rf solvers
 tar xf solvers.tgz
 rm solvers.tgz
